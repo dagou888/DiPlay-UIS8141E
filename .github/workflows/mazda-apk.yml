@@ -1,4 +1,4 @@
-name: Build Mazda Android 8.1 APK
+name: Build Mazda UIS8141E Android 8.1 APK
 
 on:
   push:
@@ -24,80 +24,56 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: platform-tools platforms;android-35 build-tools;35.0.1
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
 
-      - name: Download official DiPlay 0.2.13 APK
+      - name: Prepare official DiPlay runtime authentication
         run: |
-          curl -fL --retry 3             -o DiPlay-0.2.13.apk             https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.13/DiPlay-0.2.13.apk
-          echo "Official SHA256:"
-          sha256sum DiPlay-0.2.13.apk
+          curl -fL --retry 3 \
+            -o DiPlay-0.2.13.apk \
+            https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.13/DiPlay-0.2.13.apk
+          test "$(sha256sum DiPlay-0.2.13.apk | awk '{print $1}')" = \
+            "aed9eac786e7c0e80a2929dc2f0c2e1d0df318ca8fd83ae7c2988a98bb4cd7e6"
+          mkdir -p ci-auth
+          unzip -q -j DiPlay-0.2.13.apk 'assets/offline-mfi/*' -d ci-auth
+          test -s ci-auth/identity.pk8
+          test -s ci-auth/certificate.p7b
+          mkdir -p ci-auth/offline-mfi
+          mv ci-auth/identity.pk8 ci-auth/offline-mfi/identity.pk8
+          mv ci-auth/certificate.p7b ci-auth/offline-mfi/certificate.p7b
+          echo "DIPLAY_AUTH_ASSETS_DIR=$GITHUB_WORKSPACE/ci-auth" >> "$GITHUB_ENV"
 
-      - name: Install Apktool
-        run: |
-          curl -fL --retry 3             -o apktool.jar             https://github.com/iBotPeaches/Apktool/releases/download/v3.0.3/apktool_3.0.3.jar
-          java -jar apktool.jar --version
-
-      - name: Decode APK
-        run: java -Xmx4g -jar apktool.jar d -f DiPlay-0.2.13.apk -o decoded
-
-      - name: Apply Mazda branding and Android 8.1 manifest compatibility
+      - name: Apply Mazda visible branding
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          root = Path("decoded")
-
-          # Visible branding strings only. Do not touch package names, component names,
-          # URLs, or BYD-specific identifiers that are part of the runtime implementation.
-          for p in root.glob("res/values*/**/*.xml"):
+          root = Path("common/src/main/res")
+          for p in root.glob("values*/**/*.xml"):
               if not p.is_file():
                   continue
               s = p.read_text(encoding="utf-8", errors="ignore")
               ns = s.replace("比亚迪", "马自达").replace("BYD", "Mazda").replace("byd", "mazda")
               if ns != s:
                   p.write_text(ns, encoding="utf-8")
-
-          manifest = root / "AndroidManifest.xml"
-          s = manifest.read_text(encoding="utf-8", errors="ignore")
-          s = re.sub(r'(android:minSdkVersion\s*=\s*")28(")', r'\g<1>27\g<2>', s)
-          s = re.sub(r'android:icon\s*=\s*"@[^"]+"', 'android:icon="@drawable/mazda_logo"', s, count=1)
-          s = re.sub(r'android:roundIcon\s*=\s*"@[^"]+"', 'android:roundIcon="@drawable/mazda_logo"', s, count=1)
-          manifest.write_text(s, encoding="utf-8")
-
-          apky = root / "apktool.yml"
-          if apky.exists():
-              t = apky.read_text(encoding="utf-8", errors="ignore")
-              t = t.replace("versionName: 0.2.13", "versionName: 0.2.13-Mazda-UIS8141E")
-              apky.write_text(t, encoding="utf-8")
           PY
 
-      - name: Download Mazda emblem
+      - name: Build authenticated Mazda APK for UIS8141E
         run: |
-          mkdir -p branding
-          curl -fL --retry 3             -o branding/mazda_logo.svg             'https://upload.wikimedia.org/wikipedia/commons/b/b6/Mazda_logo_with_emblem%2C_new.svg'
-          magick -background none branding/mazda_logo.svg -resize 512x512 branding/mazda_logo.png
-          mkdir -p decoded/res/drawable
-          cp branding/mazda_logo.png decoded/res/drawable/mazda_logo.png
-          file branding/mazda_logo.png
+          ./gradlew :mobile:assembleDebug --stacktrace
+          mkdir -p output
+          cp mobile/build/outputs/apk/debug/*.apk output/DiPlay-Mazda-UIS8141E-Android8.1-debug.apk
+          sha256sum output/DiPlay-Mazda-UIS8141E-Android8.1-debug.apk
 
-      - name: Rebuild branded APK
+      - name: Verify APK contents
         run: |
-          java -Xmx4g -jar apktool.jar b decoded -o DiPlay-Mazda-UIS8141E-Android8.1-unsigned.apk
-
-      - name: Align and sign APK
-        run: |
-          SDK="${ANDROID_HOME}/build-tools/35.0.1"
-          keytool -genkeypair -v             -keystore mazda-debug.jks             -storepass android             -keypass android             -alias mazda             -keyalg RSA -keysize 2048 -validity 10000             -dname "CN=Mazda DiPlay, OU=UIS8141E, O=Local Build, L=, ST=, C=US"
-          "$SDK/zipalign" -p -f 4             DiPlay-Mazda-UIS8141E-Android8.1-unsigned.apk             DiPlay-Mazda-UIS8141E-Android8.1-aligned.apk
-          "$SDK/apksigner" sign             --ks mazda-debug.jks             --ks-pass pass:android             --key-pass pass:android             --out DiPlay-Mazda-UIS8141E-Android8.1.apk             DiPlay-Mazda-UIS8141E-Android8.1-aligned.apk
-          "$SDK/apksigner" verify --verbose DiPlay-Mazda-UIS8141E-Android8.1.apk
-          sha256sum DiPlay-Mazda-UIS8141E-Android8.1.apk
+          APK="output/DiPlay-Mazda-UIS8141E-Android8.1-debug.apk"
+          unzip -l "$APK" | grep -E 'offline-mfi/(identity.pk8|certificate.p7b)' >/dev/null
+          unzip -p "$APK" resources.arsc >/tmp/resources.bin
+          strings /tmp/resources.bin | grep -q "Mazda"
 
       - name: Upload Mazda APK
         uses: actions/upload-artifact@v4
         with:
           name: DiPlay-Mazda-UIS8141E-Android8.1
-          path: DiPlay-Mazda-UIS8141E-Android8.1.apk
+          path: output/DiPlay-Mazda-UIS8141E-Android8.1-debug.apk
           if-no-files-found: error
           retention-days: 14
