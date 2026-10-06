@@ -15,10 +15,14 @@ android {
 
     defaultConfig {
         applicationId = "com.shihab.diplay"
-        minSdk = 28
-        targetSdk = 37
+        minSdk = 27
+        targetSdk = 28
+        // UIS8141E / Android 8.1 legacy head-unit profile.
+        ndk {
+            abiFilters += listOf("armeabi-v7a")
+        }
         versionCode = 32
-        versionName = "0.2.13"
+        versionName = "0.2.13-uis8141e"
 
     }
 
