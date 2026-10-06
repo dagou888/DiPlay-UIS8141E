@@ -88,8 +88,21 @@ class LocalOnlyHotspotManager(context: Context, private val onDiagnostic: (Strin
                 deadlineNanos = deadlineNanos,
             )
             val liveRadio = awaitRadioInfo(radioInfo, apInterface, configuration, attempt, deadlineNanos)
-            if (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz")) {
+            // UIS8141E is Android 8.1 (API 27). Its firmware may only expose a 2.4 GHz
+            // LocalOnlyHotspot, so do not reject a valid 2.4 GHz AP on API 27/28.
+            val legacyLocalHotspot = Build.VERSION.SDK_INT <= 28
+            val compatibleRadio = liveRadio?.frequencyMHz?.let {
+                it in 2412..2484 || it in 5160..5895
+            }
+            val compatibleConfiguration =
+                configuration.bandLabel == "2.4 GHz" || configuration.bandLabel == "5 GHz"
+            if (!legacyLocalHotspot &&
+                (liveRadio?.frequencyMHz?.let { it !in 5160..5895 } ?: (configuration.bandLabel != "5 GHz"))
+            ) {
                 throw IOException("This firmware did not provide the requested 5 GHz local hotspot; choose Wi-Fi Direct or Car hotspot")
+            }
+            if (legacyLocalHotspot && compatibleRadio == false && !compatibleConfiguration) {
+                throw IOException("This firmware did not provide a compatible 2.4/5 GHz local hotspot")
             }
 
             synchronized(stateLock) {
