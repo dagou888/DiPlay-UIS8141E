@@ -286,14 +286,34 @@ object AirPlayPersistence {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
         val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: WirelessHotspotMode.MANUAL
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) WirelessHotspotMode.MANUAL else mode
+            ?: if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                // Android 8/9: prefer the public LocalOnlyHotspot path; keep MANUAL and
+                // EXISTING_WIFI as explicit alternatives.
+                WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+            } else {
+                WirelessHotspotMode.WIFI_P2P
+            }
+        val supported = if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            mode == WirelessHotspotMode.WIFI_P2P
+        ) {
+            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+        } else {
+            mode
+        }
         if (stored != supported.name) saveWirelessHotspotMode(context, supported)
         return supported
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT) WirelessHotspotMode.MANUAL else mode
+        val supported = if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            mode == WirelessHotspotMode.WIFI_P2P
+        ) {
+            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+        } else {
+            mode
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()
