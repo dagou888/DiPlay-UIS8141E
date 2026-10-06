@@ -331,7 +331,8 @@ class CarPlayHostActivity : ComponentActivity() {
     private var displayScaleTenths = CarPlayDisplayScale.DEFAULT_TENTHS
     private var uiScalePercent = CarPlayUiScale.DEFAULT
     private var displayDiagnosticAttempt: String? = null
-    private var hevcEnabled = true
+    // UIS8141E / Android 8.1 has unreliable HEVC CarPlay decoding; force the stable H.264 path on API 27.
+    private var hevcEnabled = false
     private var hevcSoftwareDecoderEnabled = false
     private var advancedAudioChannelMappingSupported = false
     private var advancedAudioChannelMapping = false
@@ -3206,7 +3207,7 @@ class CarPlayHostActivity : ComponentActivity() {
                     widthPixels = native.width,
                     heightPixels = native.height,
                     widthPhysicalMm = widthPhysicalMm,
-                    fps = fps,
+                    fps = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1) minOf(fps, 30) else fps,
                 ),
                 displayScalePercent,
             )
@@ -3445,7 +3446,7 @@ class CarPlayHostActivity : ComponentActivity() {
             main = declared,
             cluster = clusterDisplayConfig(),
             rightHandDrive = rightHandDrive,
-            hevc = hevcEnabled,
+            hevc = hevcEnabled && Build.VERSION.SDK_INT > Build.VERSION_CODES.O_MR1,
             microphone = microphoneAvailable,
             manufacturer = normalizedManufacturer(),
             model = normalizedModel(),
