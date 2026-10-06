@@ -47,11 +47,17 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           root = Path("common/src/main/res")
+          import re
+          text_node = re.compile(r'>([^<]*(?:比亚迪|BYD|byd)[^<]*)<', re.IGNORECASE)
           for p in root.glob("values*/**/*.xml"):
               if not p.is_file():
                   continue
               s = p.read_text(encoding="utf-8", errors="ignore")
-              ns = s.replace("比亚迪", "马自达").replace("BYD", "Mazda").replace("byd", "mazda")
+              def repl(m):
+                  t = m.group(1).replace("比亚迪", "马自达")
+                  t = re.sub(r"BYD", "Mazda", t, flags=re.IGNORECASE)
+                  return ">" + t + "<"
+              ns = text_node.sub(repl, s)
               if ns != s:
                   p.write_text(ns, encoding="utf-8")
           PY
