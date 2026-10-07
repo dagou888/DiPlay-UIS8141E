@@ -56,6 +56,7 @@ import com.shilapi.xcertplay.network.WirelessReceiveDiagnostics
 import com.shilapi.xcertplay.network.WirelessStartupPolicy
 import com.shilapi.xcertplay.network.WirelessStartupException
 import com.shilapi.xcertplay.network.WirelessStartupFailure
+import com.shilapi.xcertplay.network.WifiPerformanceLock
 import com.shilapi.xcertplay.network.WirelessStartupDiagnostics
 import com.shilapi.xcertplay.transport.BlockingDuplexByteStream
 import com.shilapi.xcertplay.transport.BluetoothRfcommDuplexStream
@@ -244,6 +245,7 @@ class CarPlayController(
 
     @Volatile private var hotspot: WirelessHotspotManager? = null
     @Volatile private var wifiScanPause: WifiScanPause? = null
+    @Volatile private var wifiPerformanceLock: WifiPerformanceLock? = null
     @Volatile private var bonjour: CarPlayBonjour? = null
     private val wirelessResourceLock = Any()
     private val wirelessFailureReported = AtomicBoolean(false)
@@ -427,6 +429,12 @@ class CarPlayController(
                     debugLog("video in car gear=${when (parked) { true -> "P"; false -> "not-P"; null -> "unknown" }}")
                 },
             ).also { it.start() }
+        }
+        if (config.transport == CarPlayTransport.WIRELESS) {
+            wifiPerformanceLock = WifiPerformanceLock(appContext).also {
+                it.acquire()
+                debugLog("Wi-Fi high-performance lock requested for wireless CarPlay")
+            }
         }
         if (config.transport == CarPlayTransport.WIRED) {
             permissionCloseable = iphoneHost.registerPermissionReceiver(::onIphonePermission)
@@ -612,6 +620,8 @@ class CarPlayController(
                         closeBestEffort("wireless stack") { closeWirelessStack(service) }
                         closeBestEffort("Wi-Fi scan pause") { wifiScanPause?.close() }
                         wifiScanPause = null
+                        closeBestEffort("Wi-Fi performance lock") { wifiPerformanceLock?.close() }
+                        wifiPerformanceLock = null
                     } else {
                         closeBestEffort("CSM") { csm?.close() }
                         csm = null
