@@ -70,15 +70,33 @@ class ExistingWifiManager(
                         !it.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
                 } == true
             }
-            if (networks.size > 1) throw IOException("Multiple Wi-Fi networks are active; keep one existing Wi-Fi connection")
-            val network = networks.singleOrNull()
-            val properties = network?.let(connectivity::getLinkProperties)
-            val name = properties?.interfaceName
-            val iface = name?.let { runCatching { NetworkInterface.getByName(it) }.getOrNull() }
-            val address = if (iface == null) null else properties?.let {
-                wirelessHostAddress(it.linkAddresses.map { link -> link.address }, iface.index)
+            // Android 8.1 vendor builds can expose stale/duplicate Wi-Fi Network objects
+            // while a Personal Hotspot is being associated. Prefer the configured SSID
+            // instead of aborting merely because multiple Wi-Fi transports are reported.
+            val candidates = networks.mapNotNull { network ->
+                val properties = connectivity.getLinkProperties(network) ?: return@mapNotNull null
+                val iface = properties.interfaceName?.let {
+                    runCatching { NetworkInterface.getByName(it) }.getOrNull()
+                } ?: return@mapNotNull null
+                val address = wirelessHostAddress(
+                    properties.linkAddresses.map { it.address }, iface.index
+                ) ?: return@mapNotNull null
+                val capabilities = connectivity.getNetworkCapabilities(network)
+                val networkInfo = if (Build.VERSION.SDK_INT >= 31) capabilities?.transportInfo as? WifiInfo else null
+                @Suppress("DEPRECATION")
+                val stationInfo = try { wifi.connectionInfo } catch (_: SecurityException) { null }
+                val info = listOfNotNull(networkInfo, stationInfo).firstOrNull { readableSsid(it) != null }
+                    ?: networkInfo ?: stationInfo
+                Triple(network, properties, Triple(iface, address, readableSsid(info)))
             }
-            if (network != null && name != null && address != null) {
+            val usable = candidates.firstOrNull { it.third.third == ssid } ?: candidates.firstOrNull()
+            val network = usable?.first
+            val properties = usable?.second
+            val name = properties?.interfaceName
+            val selectedDetails = usable?.third
+            val iface = selectedDetails?.first
+            val address = selectedDetails?.second
+            if (network != null && name != null && iface != null && address != null) {
                 val addresses = existingWifiHostAddresses(properties.linkAddresses.map { it.address }, iface!!.index)
                 val capabilities = connectivity.getNetworkCapabilities(network)
                 val networkInfo = if (Build.VERSION.SDK_INT >= 31) capabilities?.transportInfo as? WifiInfo else null
@@ -88,7 +106,7 @@ class ExistingWifiManager(
                 val stationInfo = try { wifi.connectionInfo } catch (_: SecurityException) { null }
                 val info = listOfNotNull(networkInfo, stationInfo).firstOrNull { readableSsid(it) != null }
                     ?: networkInfo ?: stationInfo
-                val liveSsid = readableSsid(info)
+                val liveSsid = selectedDetails?.third ?: readableSsid(info)
                 if (liveSsid != null && liveSsid != ssid) {
                     throw IOException("Configured Wi-Fi does not match the connected network; check Wi-Fi settings and saved details")
                 }
