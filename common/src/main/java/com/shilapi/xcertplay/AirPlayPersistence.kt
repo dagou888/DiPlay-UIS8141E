@@ -289,17 +289,37 @@ object AirPlayPersistence {
         // dedicated legacy implementation. Do not coerce WIFI_P2P into LocalOnlyHotspot:
         // the latter is a different backend and is known to be incompatible with the
         // UIS8141E Android 8.1 firmware used by the target head unit.
-        val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: WirelessHotspotMode.WIFI_P2P
+        //
+        // Migrate the old broken Android 8.1 default as well: earlier builds persisted
+        // LOCAL_ONLY_HOTSPOT when the user selected Wi-Fi Direct, so an upgrade must not
+        // keep silently launching the wrong backend.
+        val storedMode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
+        val mode = when {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                (storedMode == null || storedMode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT ||
+                    storedMode == WirelessHotspotMode.WIFI_P2P) -> WirelessHotspotMode.WIFI_P2P
+            storedMode != null -> storedMode
+            else -> WirelessHotspotMode.WIFI_P2P
+        }
         if (stored != mode.name) saveWirelessHotspotMode(context, mode)
         return mode
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
         // Preserve an explicit WIFI_P2P selection on Android 8/9. The legacy
-        // WifiP2pGroupManager handles those releases directly.
+        // WifiP2pGroupManager handles those releases directly. Migrate the old
+        // LOCAL_ONLY_HOTSPOT selection on these releases because it was previously
+        // written by the buggy WIFI_P2P persistence fallback.
+        val supported = if (
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            mode == WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
+        ) {
+            WirelessHotspotMode.WIFI_P2P
+        } else {
+            mode
+        }
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_WIRELESS_HOTSPOT_MODE, mode.name)
+            .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
             .apply()
     }
 
