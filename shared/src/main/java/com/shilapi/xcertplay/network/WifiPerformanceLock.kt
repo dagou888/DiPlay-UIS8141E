@@ -17,13 +17,15 @@ internal class WifiPerformanceLock(context: Context) : AutoCloseable {
 
     @Synchronized
     fun acquire() {
-        if (lock?.isHeld == false) runCatching { lock.acquire() }
+        val wifiLock = lock ?: return
+        if (!wifiLock.isHeld) runCatching { wifiLock.acquire() }
     }
 
     @Synchronized
     override fun close() {
+        val wifiLock = lock ?: return
         runCatching {
-            if (lock?.isHeld == true) lock.release()
+            if (wifiLock.isHeld) wifiLock.release()
         }
     }
 }
