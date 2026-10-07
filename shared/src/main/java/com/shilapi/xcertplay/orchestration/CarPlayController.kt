@@ -1267,7 +1267,16 @@ class CarPlayController(
                 // or IPv6 while the listener/probe was bound to the AP's IPv4 address.
                 useInterfaceMdns = true,
                 onEvent = { event -> debugLog("wireless bonjour: ${event.diagnosticSummary()}") },
-                additionalAddresses = hotspotInfo.hostAddresses.filter { it != hostAddress },
+                // UIS8141E Android 8.1 is much more reliable when the Personal Hotspot
+                // session stays on one IPv4 interface. Do not let JmDNS create an IPv6
+                // responder on a second address family during the CarPlay handoff.
+                additionalAddresses = hotspotInfo.hostAddresses.filter {
+                    it != hostAddress && (
+                        Build.VERSION.SDK_INT > Build.VERSION_CODES.P ||
+                            hotspotInfo.backend != WirelessHotspotBackend.EXISTING_WIFI ||
+                            it is java.net.Inet4Address
+                    )
+                },
             )
             synchronized(wirelessResourceLock) {
                 if (isStaleWirelessRun(generation)) return
