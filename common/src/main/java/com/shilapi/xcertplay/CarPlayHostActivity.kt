@@ -27,6 +27,7 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
+import android.util.Base64
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -3487,8 +3488,12 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun defaultAirPlayIconBytes(): ByteArray =
-        // Shown in CarPlay's app list as the "back to the car" button.
-        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
+        // Mazda-style winged-M icon shown in CarPlay's app list as the "back to the car" button.
+        Base64.decode(MAZDA_CARPLAY_ICON_BASE64, Base64.DEFAULT)
+
+    private companion object {
+        const val MAZDA_CARPLAY_ICON_BASE64 = "$b64"
+    }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
