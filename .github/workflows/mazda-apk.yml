@@ -2,7 +2,7 @@ name: Build Mazda UIS8141E Android 8.1 APK
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:
