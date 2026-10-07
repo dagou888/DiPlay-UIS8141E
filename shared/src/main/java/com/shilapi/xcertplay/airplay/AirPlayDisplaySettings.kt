@@ -15,7 +15,8 @@ object AirPlayDisplaySettings {
     const val MIN_FPS = 30
     const val MAX_FPS = 60
     const val FPS_STEP = 5
-    const val DEFAULT_FPS = MAX_FPS
+    // UIS8141E / Android 8.1 is a low-memory platform; 30 fps is the stable baseline.
+    const val DEFAULT_FPS = 30
 
     const val MIN_WIDTH_PHYSICAL_MM = 100
     const val MAX_WIDTH_PHYSICAL_MM = 400
