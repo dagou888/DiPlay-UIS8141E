@@ -56,6 +56,12 @@ class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String
         try {
             val accepted = bound.accept()
             socket = accepted
+            // The CarPlay screen is latency-sensitive. Disable Nagle and enlarge the receive
+            // window so Android 8.1 vendor TCP buffering is less likely to burst the video feed.
+            runCatching { accepted.tcpNoDelay = true }
+            runCatching { accepted.keepAlive = true }
+            runCatching { accepted.receiveBufferSize = VIDEO_RECEIVE_BUFFER_BYTES }
+            Log.i(TAG, "video TCP socket tuned tcpNoDelay=true receiveBuffer=${VIDEO_RECEIVE_BUFFER_BYTES}")
             run(accepted)
         } catch (error: Exception) {
             if (!closed.get()) listener.onClosed(error)
@@ -133,6 +139,7 @@ class ScreenStream(private val key: ByteArray, private val onDiagnostic: (String
         const val OP_VIDEO_FRAME = 0
         const val OP_VIDEO_CONFIG = 1
         const val MAX_BODY = 8 * 1024 * 1024
+        const val VIDEO_RECEIVE_BUFFER_BYTES = 4 * 1024 * 1024
     }
 }
 
