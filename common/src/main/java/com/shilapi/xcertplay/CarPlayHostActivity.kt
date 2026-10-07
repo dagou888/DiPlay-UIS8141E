@@ -589,6 +589,10 @@ class CarPlayHostActivity : ComponentActivity() {
         model = AirPlayPersistence.loadModel(this)
         oemLabel = AirPlayPersistence.loadOemLabel(this)
         fps = AirPlayPersistence.loadFps(this)
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1 && fps > AirPlayDisplaySettings.DEFAULT_FPS) {
+            fps = AirPlayDisplaySettings.DEFAULT_FPS
+            AirPlayPersistence.saveFps(this, fps)
+        }
         widthPhysicalMm = AirPlayPersistence.loadWidthPhysicalMm(this)
         physicalSizeBasis = AirPlayPersistence.loadPhysicalSizeBasis(this)
         AirPlayPersistence.loadMaximumDetectedDisplay(this).let { (width, height) ->
