@@ -2114,6 +2114,11 @@ class CarPlayController(
                 isCancelled = { isStaleWirelessRun(generation) },
             )
         }
+        debugLog(
+            "generation=" + generation + " wireless hotspot selection configured=" +
+                hotspotMode.name + " manager=" + manager.javaClass.simpleName +
+                " sdk=" + Build.VERSION.SDK_INT,
+        )
         synchronized(wirelessResourceLock) {
             if (isStaleWirelessRun(generation)) {
                 manager.close()
