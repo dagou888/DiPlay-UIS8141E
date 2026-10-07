@@ -3491,10 +3491,6 @@ class CarPlayHostActivity : ComponentActivity() {
         // Mazda-style winged-M icon shown in CarPlay's app list as the "back to the car" button.
         Base64.decode(MAZDA_CARPLAY_ICON_BASE64, Base64.DEFAULT)
 
-    private companion object {
-        const val MAZDA_CARPLAY_ICON_BASE64 = "$b64"
-    }
-
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
         val custom = AirPlayPersistence.loadCustomAirPlayIconFile(this)
@@ -4710,6 +4706,7 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private companion object {
+        const val MAZDA_CARPLAY_ICON_BASE64 = "$b64"
         const val SIDE_PANEL_REFRESH_MILLIS = 5_000L
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
