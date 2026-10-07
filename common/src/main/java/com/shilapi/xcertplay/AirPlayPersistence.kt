@@ -285,37 +285,21 @@ object AirPlayPersistence {
     fun loadWirelessHotspotMode(context: Context): WirelessHotspotMode {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
+        // Android 8/9 have a legacy WifiP2pManager API and this project contains a
+        // dedicated legacy implementation. Do not coerce WIFI_P2P into LocalOnlyHotspot:
+        // the latter is a different backend and is known to be incompatible with the
+        // UIS8141E Android 8.1 firmware used by the target head unit.
         val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                // Android 8/9: prefer the public LocalOnlyHotspot path; keep MANUAL and
-                // EXISTING_WIFI as explicit alternatives.
-                WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-            } else {
-                WirelessHotspotMode.WIFI_P2P
-            }
-        val supported = if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            mode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            mode
-        }
-        if (stored != supported.name) saveWirelessHotspotMode(context, supported)
-        return supported
+            ?: WirelessHotspotMode.WIFI_P2P
+        if (stored != mode.name) saveWirelessHotspotMode(context, mode)
+        return mode
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            mode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            mode
-        }
+        // Preserve an explicit WIFI_P2P selection on Android 8/9. The legacy
+        // WifiP2pGroupManager handles those releases directly.
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
+            .putString(KEY_WIRELESS_HOTSPOT_MODE, mode.name)
             .apply()
     }
 
