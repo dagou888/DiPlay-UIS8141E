@@ -1242,7 +1242,10 @@ class CarPlayHostActivity : ComponentActivity() {
     private fun buildContentView(): View {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
         val video = TextureView(this).apply {
-            isOpaque = false
+            // The UIS8141E renders CarPlay as a full-screen video surface. Keeping the texture
+            // opaque avoids an unnecessary alpha/composition pass on the 1 GB Android 8.1 GPU.
+            isOpaque = true
+            setBackgroundColor(Color.BLACK)
             surfaceTextureListener = textureListener
         }
         pictureBinding = CarPlayPicture.Binding(video)
