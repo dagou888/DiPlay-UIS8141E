@@ -35,7 +35,7 @@ android {
         create("stableDebug") {
             storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
             storePassword = "android"
-            keyAlias = "AndroidDebugKey"
+            keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
         create("release") {
