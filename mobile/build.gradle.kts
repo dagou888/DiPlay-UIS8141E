@@ -30,12 +30,12 @@ android {
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
     signingConfigs {
-        // Stable debug signing is required for repeated car-side updates. GitHub runners
-        // otherwise generate a new debug keystore on every build, forcing an uninstall.
+        // Reuse Gradle's standard debug identity. CI caches ~/.android/debug.keystore
+        // so later car-test APKs remain installable as updates instead of requiring uninstall.
         create("stableDebug") {
-            storeFile = rootProject.file("ci/diplay-debug.keystore")
+            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
             storePassword = "android"
-            keyAlias = "diplay"
+            keyAlias = "AndroidDebugKey"
             keyPassword = "android"
         }
         create("release") {
