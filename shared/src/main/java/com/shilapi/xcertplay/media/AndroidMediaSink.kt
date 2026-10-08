@@ -422,6 +422,14 @@ private class VideoDecoder(
     private var failureReports = 0
     private val referenceChain = VideoReferenceChain()
     private var lastKeyFrameRequestNs = 0L
+    // Android 8.1 vendor Wi-Fi can deliver several encrypted video frames in one burst.
+    // Pace those bursts back to the negotiated 30-fps baseline at the Surface boundary.
+    // Newer releases keep the normal immediate-render path.
+    private val burstPacingEnabled = Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1
+    private val pacingIntervalUs = 1_000_000L / 30L
+    private var pacingInitialized = false
+    private var lastReceivedNs = 0L
+    private var nextPresentationUs = 0L
     // The main screen keeps the historical log format; other screens are labelled.
     private val stats = VideoStats(statsLabel ?: if (streamType == 110) "" else " stream=$streamType")
     private val thread = Thread(::run, "carplay-video").apply { isDaemon = true; start() }
@@ -455,7 +463,7 @@ private class VideoDecoder(
                             if (System.nanoTime() - job.receivedNs > MAX_FRAME_AGE_NS) {
                                 queue.discardFrames()
                                 recover("video backlog exceeded 250 ms")
-                            } else feed(job.nalus)
+                            } else feed(job.nalus, job.receivedNs)
                         }
                         is VideoJob.SurfaceChanged -> changeSurface(job.surface)
                         is VideoJob.Resync -> recover("video queue overflow")
@@ -499,6 +507,7 @@ private class VideoDecoder(
         duplicateConfigLogged = false
         releaseDecoder()
         referenceChain.reset()
+        resetPacing()
         val surface = outputSurface ?: return
         val codec = config.codec
         val codecData = config.codecData
@@ -630,7 +639,7 @@ private class VideoDecoder(
         lastConfig?.let(::configureDecoder)
     }
 
-    private fun feed(nalus: ByteArray) {
+    private fun feed(nalus: ByteArray, receivedNs: Long) {
         val annexB = MediaCodecSupport.toAnnexB(nalus)
         val config = lastConfig ?: return
         if (outputSurface == null) return
@@ -657,7 +666,7 @@ private class VideoDecoder(
         input.clear()
         if (annexB.size <= input.remaining()) {
             input.put(annexB)
-            codec.queueInputBuffer(index, 0, annexB.size, System.nanoTime() / 1000, 0)
+            codec.queueInputBuffer(index, 0, annexB.size, presentationTimeUs(receivedNs), 0)
             referenceChain.onQueued()
         } else {
             recover("video frame exceeded codec input capacity")
@@ -673,7 +682,30 @@ private class VideoDecoder(
         // Recreate with codec-specific data: flush can discard CSD before the first output.
         releaseDecoder()
         referenceChain.reset()
+        resetPacing()
         requestKeyFrameIfDue()
+    }
+
+    private fun resetPacing() {
+        pacingInitialized = false
+        lastReceivedNs = 0L
+        nextPresentationUs = 0L
+    }
+
+    private fun presentationTimeUs(receivedNs: Long): Long {
+        val nowUs = receivedNs / 1_000L
+        if (!burstPacingEnabled) return nowUs
+        val previous = lastReceivedNs
+        val largeGap = previous != 0L && receivedNs - previous > 150_000_000L
+        val pts = if (!pacingInitialized || largeGap) {
+            pacingInitialized = true
+            nowUs
+        } else {
+            maxOf(nowUs, nextPresentationUs)
+        }
+        lastReceivedNs = receivedNs
+        nextPresentationUs = pts + pacingIntervalUs
+        return pts
     }
 
     private fun requestKeyFrameIfDue() {
@@ -692,7 +724,15 @@ private class VideoDecoder(
                 index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> logOutputFormat(codec.outputFormat)
                 index >= 0 -> {
                     val render = outputSurface != null
-                    codec.releaseOutputBuffer(index, render)
+                    if (render && burstPacingEnabled) {
+                        runCatching {
+                            codec.releaseOutputBuffer(index, info.presentationTimeUs * 1_000L)
+                        }.getOrElse {
+                            codec.releaseOutputBuffer(index, true)
+                        }
+                    } else {
+                        codec.releaseOutputBuffer(index, render)
+                    }
                     if (render) stats.onRendered()
                     if (render && !renderedFrameLogged) {
                         renderedFrameLogged = true
