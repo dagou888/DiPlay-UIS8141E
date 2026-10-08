@@ -26,83 +26,16 @@ jobs:
         with:
           packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
 
-      - name: Prepare stable car-test signing key
-        run: |
-          mkdir -p ci
-          cat > ci/diplay-debug.key <<'EOF'
------BEGIN PRIVATE KEY-----
-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
-MQ8Dl/LLhCkzqYDpl70cuA==
------END PRIVATE KEY-----
-EOF
-          cat > ci/diplay-debug.crt <<'EOF'
------BEGIN CERTIFICATE-----
-MIIDhDCCAmygAwIBAgIBATANBgkqhkiG9w0BAQsFADBaMQ8wDQYDVQQDDAZEaVBs
-YXkxDzANBgNVBAsMBkRpUGxheTEPMA0GA1UECgwGRGlQbGF5MQswCQYDVQQHDAJO
-QTELMAkGA1UECAwCTkExCzAJBgNVBAYTAlVTMCAXDTI2MTAwODAxMjA0NFoYDzIw
-NTQwMjIzMDEyMDQ0WjBaMQ8wDQYDVQQDDAZEaVBsYXkxDzANBgNVBAsMBkRpUGxh
-eTEPMA0GA1UECgwGRGlQbGF5MQswCQYDVQQHDAJOQTELMAkGA1UECAwCTkExCzAJ
-BgNVBAYTAlVTMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqkE3y8Kh
-BjXFhZD4V0yn7xlFKkvigqJWK19G+J8mOQKZzgVE3PkwGZk8RJHP4KurH3vzrv3N
-Wukz3XyFomMaDllnWNFEHtylyYLiCJs+YYE+kxHOuE8N7NFE5tZiraowDzh/qXXC
-DKpq1WMxq9osZTs90Xe/h8SusbYJcN8AaUlYYT6kN/86G7BxcDUp0OrVtxOzXVee
-LKb/0N9royeM7tMBORVWAa/JbTaoFyYfdNAjh/ZuIsK/i5EpLkjFoINeEgRAyIoo
-IlaTSd4fwMRAzmEcrXD0/eF9zApMNjPoaSmHya/jhH9rYC2s3upSLtz4C1Qp3wD+
-BdjZBI8BlDWTpQIDAQABo1MwUTAdBgNVHQ4EFgQUFokGnJ2b+1+SzYyU87WMO8oF
-RwUwHwYDVR0jBBgwFoAUFokGnJ2b+1+SzYyU87WMO8oFRwUwDwYDVR0TAQH/BAUw
-AwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAFOXUPB5huQ6dze1pUueuNqlVavm4w3Dj
-hwqBbti8ZPYZxNRQmF1B6knvYMl05SkI6lnId2TQvpg9VSflxuLJfsfkTa0RHuw6
-eopqsMhM2/wAiwYjkBUKQiVypSSpSW1xCmdSvq5Eypuk0fAlewudvGGoBKcKScAl
-L7isahkRlZ3aTjRld6rk6U59iDuzt1/UUKbMVYdZv8qAFnOY3GSWhE5pN8XHwFQv
-akxdFN/yQtqrewNOHaK02eKPn2UG5mEZxTXopfCqKNQattO3VbCwrP2kzV/BLkCE
-vTYtb6anatECgj7J+DUgC/6dp/8ihLlT5KAM+nTJCs2oXhwr952hrQ==
------END CERTIFICATE-----
-EOF
-          openssl pkcs12 -export -out ci/diplay-debug.p12             -inkey ci/diplay-debug.key -in ci/diplay-debug.crt             -name diplay -passout pass:android
-          keytool -importkeystore -noprompt             -srckeystore ci/diplay-debug.p12 -srcstoretype PKCS12 -srcstorepass android             -destkeystore ci/diplay-debug.keystore -deststorepass android -destkeypass android             -srcalias diplay -destalias diplay
-          keytool -list -keystore ci/diplay-debug.keystore -storepass android -alias diplay >/dev/null
-          rm -f ci/diplay-debug.key ci/diplay-debug.crt ci/diplay-debug.p12
+      - name: Restore stable car-test debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: diplay-android-debug-keystore-v1
 
       - name: Prepare official DiPlay runtime authentication
         run: |
-          curl -fL --retry 3 \
-            -o DiPlay-0.2.13.apk \
-            https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.13/DiPlay-0.2.13.apk
-          test "$(sha256sum DiPlay-0.2.13.apk | awk '{print $1}')" = \
-            "aed9eac786e7c0e80a2929dc2f0c2e1d0df318ca8fd83ae7c2988a98bb4cd7e6"
+          curl -fL --retry 3 -o DiPlay-0.2.13.apk https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.13/DiPlay-0.2.13.apk
+          test "$(sha256sum DiPlay-0.2.13.apk | awk '{print $1}')" = "aed9eac786e7c0e80a2929dc2f0c2e1d0df318ca8fd83ae7c2988a98bb4cd7e6"
           mkdir -p ci-auth
           unzip -q -j DiPlay-0.2.13.apk 'assets/offline-mfi/*' -d ci-auth
           test -s ci-auth/identity.pk8
@@ -116,8 +49,8 @@ EOF
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          root = Path("common/src/main/res")
           import re
+          root = Path("common/src/main/res")
           text_node = re.compile(r'>([^<]*(?:比亚迪|BYD|byd)[^<]*)<', re.IGNORECASE)
           for p in root.glob("values*/**/*.xml"):
               if not p.is_file():
