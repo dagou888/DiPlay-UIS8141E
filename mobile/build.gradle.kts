@@ -21,7 +21,7 @@ android {
         ndk {
             abiFilters += listOf("armeabi-v7a")
         }
-        versionCode = 32
+        versionCode = 33
         versionName = "0.2.13-uis8141e"
 
     }
@@ -30,6 +30,14 @@ android {
     localAuthenticationAssets?.let { sourceSets.getByName("main").assets.srcDir(it) }
 
     signingConfigs {
+        // Stable debug signing is required for repeated car-side updates. GitHub runners
+        // otherwise generate a new debug keystore on every build, forcing an uninstall.
+        create("stableDebug") {
+            storeFile = rootProject.file("ci/diplay-debug.keystore")
+            storePassword = "android"
+            keyAlias = "diplay"
+            keyPassword = "android"
+        }
         create("release") {
             storeFile = file(
                 providers.environmentVariable("ANDROID_KEYSTORE_PATH")
@@ -45,6 +53,7 @@ android {
         debug {
             applicationIdSuffix = ".hudtest"
             versionNameSuffix = "-hud-test"
+            signingConfig = signingConfigs.getByName("stableDebug")
         }
         release {
             optimization {
