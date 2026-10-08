@@ -4,31 +4,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Clean Mazda-style winged-M mark; no red disk/background, so it does not render as a tomato. -->
     <path
-        android:fillColor="#D71920"
-        android:pathData="M54,4 A50,50 0,1 0,54,104 A50,50 0,1 0,54,4" />
-    <!-- Mazda-inspired winged-M mark, drawn as a clean vector so the launcher and DiPlay UI
-         use the same asset on the low-resolution UIS8141E display. -->
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10,56
+            C13,39 26,25 43,21
+            C48,20 52,23 54,29
+            C56,23 60,20 65,21
+            C82,25 95,39 98,56
+            C91,50 84,46 77,43
+            C78,50 77,58 74,67
+            C70,57 65,48 59,42
+            C57,40 55,39 54,39
+            C53,39 51,40 49,42
+            C43,48 38,57 34,67
+            C31,58 30,50 31,43
+            C24,46 17,50 10,56 Z" />
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M16,55
-            C18,37 31,25 45,25
-            C49,25 52,27 54,31
-            C56,27 59,25 63,25
-            C77,25 90,37 92,55
-            C87,50 82,46 76,43
-            C77,49 77,56 75,64
-            C72,55 68,47 63,41
-            C60,38 57,37 54,37
-            C51,37 48,38 45,41
-            C40,47 36,55 33,64
-            C31,56 31,49 32,43
-            C26,46 21,50 16,55 Z" />
-    <path
-        android:fillColor="#D71920"
-        android:pathData="M40,57
-            C44,50 48,46 54,44
-            C60,46 64,50 68,57
-            C63,54 59,52 54,52
-            C49,52 45,54 40,57 Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M27,61
+            C36,56 44,53 54,53
+            C64,53 72,56 81,61
+            C74,60 66,60 59,62
+            C57,63 55,65 54,68
+            C53,65 51,63 49,62
+            C42,60 34,60 27,61 Z" />
 </vector>
