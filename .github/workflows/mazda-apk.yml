@@ -26,6 +26,11 @@ jobs:
         with:
           packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
 
+      - name: Verify stable car-test signing key
+        run: |
+          test -s ci/diplay-debug.keystore
+          keytool -list -keystore ci/diplay-debug.keystore -storepass android -alias diplay >/dev/null
+
       - name: Prepare official DiPlay runtime authentication
         run: |
           curl -fL --retry 3 \
