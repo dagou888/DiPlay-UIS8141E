@@ -27,7 +27,7 @@ internal class VideoDecodeQueue(
     // The UIS8141E has only 1 GB RAM. Keeping a large burst in the queue makes the decoder
     // play stale frames long after a Wi-Fi gap, which looks like repeated judder. Bound both
     // queue depth and bytes tightly; when exceeded, resync at the next random-access frame.
-    private val maxFrames: Int = 12,
+    private val maxFrames: Int = 8,
     private val maxBytes: Int = 4 * 1024 * 1024,
 ) {
     private val jobs = LinkedBlockingQueue<VideoJob>()
