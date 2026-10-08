@@ -32,6 +32,18 @@ jobs:
           path: ~/.android/debug.keystore
           key: diplay-android-debug-keystore-v1
 
+      - name: Ensure stable car-test debug keystore exists
+        run: |
+          mkdir -p ~/.android
+          if [ ! -s ~/.android/debug.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore ~/.android/debug.keystore \
+              -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey >/dev/null
+
       - name: Prepare official DiPlay runtime authentication
         run: |
           curl -fL --retry 3 -o DiPlay-0.2.13.apk https://github.com/shihabal3amri/DiPlay/releases/download/v0.2.13/DiPlay-0.2.13.apk
