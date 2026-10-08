@@ -285,37 +285,22 @@ object AirPlayPersistence {
     fun loadWirelessHotspotMode(context: Context): WirelessHotspotMode {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val stored = prefs.getString(KEY_WIRELESS_HOTSPOT_MODE, null)
+        // UIS8141E Android 8.1 uses the legacy WifiP2pManager API, which this fork
+        // implements in WifiP2pGroupManager. Do not silently convert WIFI_P2P to
+        // LOCAL_ONLY_HOTSPOT on pre-Android-10 devices: that made the visible
+        // "Wi-Fi Direct" choice immediately disappear after the user tapped it.
         val mode = WirelessHotspotMode.entries.firstOrNull { it.name == stored }
-            ?: if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                // Android 8/9: prefer the public LocalOnlyHotspot path; keep MANUAL and
-                // EXISTING_WIFI as explicit alternatives.
-                WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-            } else {
-                WirelessHotspotMode.WIFI_P2P
-            }
-        val supported = if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            mode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            mode
-        }
-        if (stored != supported.name) saveWirelessHotspotMode(context, supported)
-        return supported
+            ?: WirelessHotspotMode.WIFI_P2P
+        if (stored != mode.name) saveWirelessHotspotMode(context, mode)
+        return mode
     }
 
     fun saveWirelessHotspotMode(context: Context, mode: WirelessHotspotMode) {
-        val supported = if (
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-            mode == WirelessHotspotMode.WIFI_P2P
-        ) {
-            WirelessHotspotMode.LOCAL_ONLY_HOTSPOT
-        } else {
-            mode
-        }
+        // Keep WIFI_P2P intact on Android 8.1/9. WifiP2pGroupManager has an explicit
+        // legacy createGroup path for those releases; LOCAL_ONLY_HOTSPOT is a separate
+        // transport and must not replace the user's Wi-Fi Direct selection.
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_WIRELESS_HOTSPOT_MODE, supported.name)
+            .putString(KEY_WIRELESS_HOTSPOT_MODE, mode.name)
             .apply()
     }
 
