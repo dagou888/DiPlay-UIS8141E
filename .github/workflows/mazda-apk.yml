@@ -26,6 +26,14 @@ jobs:
         with:
           packages: platform-tools platforms;android-37.0 build-tools;36.0.0 ndk;28.2.13676358
 
+      - name: Restore the original DiPlay icon assets
+        run: |
+          rm -f common/src/main/res/drawable/ic_carplay.xml common/src/main/res/drawable/ic_carplay.png
+          curl -fL --retry 3 \
+            -o common/src/main/res/drawable/ic_carplay.png \
+            https://raw.githubusercontent.com/shihabal3amri/DiPlay/ef4e3fe5c39fa49a532a9570ecb930618a06e106/common/src/main/res/drawable/ic_carplay.png
+          file common/src/main/res/drawable/ic_carplay.png | grep -q 'PNG image data'
+
       - name: Restore stable car-test debug keystore
         uses: actions/cache@v4
         with:

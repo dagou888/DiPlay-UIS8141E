@@ -21,7 +21,7 @@ android {
         ndk {
             abiFilters += listOf("armeabi-v7a")
         }
-        versionCode = 33
+        versionCode = 34
         versionName = "0.2.13-uis8141e"
 
     }

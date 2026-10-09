@@ -27,7 +27,6 @@ import android.text.Editable
 import android.text.InputType
 import android.text.TextUtils
 import android.text.TextWatcher
-import android.util.Base64
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -3491,8 +3490,8 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun defaultAirPlayIconBytes(): ByteArray =
-        // Mazda-style winged-M icon shown in CarPlay's app list as the "back to the car" button.
-        Base64.decode(MAZDA_CARPLAY_ICON_BASE64, Base64.DEFAULT)
+        // Preserve the project's original icon shown in CarPlay's app list as the "back to the car" button.
+        resources.openRawResource(R.raw.ic_car_home).use { it.readBytes() }
 
     private fun updateAirPlayIconPreview() {
         val preview = iconPreviewView ?: return
@@ -3852,6 +3851,44 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private fun startCarPlay(size: DisplaySize) {
+        try {
+            startCarPlayInternal(size)
+        } catch (error: Exception) {
+            handleCarPlayStartFailure(error)
+        } catch (error: LinkageError) {
+            // Vendor Android 8.1 frameworks sometimes lack APIs that compile against a newer SDK.
+            handleCarPlayStartFailure(error)
+        }
+    }
+
+    private fun handleCarPlayStartFailure(error: Throwable) {
+        Log.e(TAG, "CarPlay startup failed before connection setup completed", error)
+        runCatching {
+            appendLog(
+                "Connection initialization failed: ${error.javaClass.simpleName}: " +
+                    (error.message ?: "no detail").take(220),
+            )
+        }
+        val failedController = controller
+        val failedSink = sink
+        runCatching { CarPlayMediaKeys.detach(failedController) }
+        if (failedController != null) {
+            runCatching { CarPlayBackgroundSession.clear(failedController) }
+        }
+        controller = null
+        sink = null
+        sessionDisplay = null
+        runCatching { failedController?.close() }
+        runCatching { failedSink?.close() }
+        runCatching { applicationContext.stopService(Intent(applicationContext, DiPlaySessionService::class.java)) }
+        runCatching {
+            setConnectionStage(
+                getString(R.string.could_not_start_carplay_return_to_diplay_and_check_app_per),
+            )
+        }
+    }
+
+    private fun startCarPlayInternal(size: DisplaySize) {
         if (CarPlayBackgroundSession.hasSession() && !CarPlayBackgroundSession.isOwner(this)) return
         if (shuttingDown.get() || menuOpen || handshakeResetInProgress || controller != null) return
         val controllerGeneration = restartGeneration
@@ -4709,7 +4746,6 @@ class CarPlayHostActivity : ComponentActivity() {
     }
 
     private companion object {
-        const val MAZDA_CARPLAY_ICON_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAABbElEQVR42u2aUQ7EIAhElfRivfju0dyvJs3GWsQBTRw/NxWHJ9BFmz8plbTxkLT5IAACIAACIAACIAACIAACIAACIAACIID9xhG94FneD6C+OYfpyd5HYhqHZwJxA4BwPAIEHICH454goABQ+R1ZJyAAWoIRQj3ti5c4dL4+2RtNOfHI57vYUYH3+VaoLQ3yNuks5dFA7fdLJLoYXvZqEFr67n4MpcC/gZbzM94CGn1qABqiPc5bo8FS/HojViwFLOJd7/EarvklrYe1IT0S+iMwe/Q9PSseztWc6nUUYUOjX7x3WOOkV0ppdAs63BDhHtlBHhajqxZBy0YJMpRXPFxxa4b+F4+Mjqe1LGkqK+3GjPWG2uGVaoG1SEv0om9zPGyGpAD6n1vUcD8R0nZwPW0uEtaB3NmW4FY/P8NxKABEtMwqqLwX4M1Q8Nfi290Nrj74fQABEAABEAABEAABEAABEAABEAABEMB+4wcNi9WHX4uP1wAAAABJRU5ErkJggg=="
         const val SIDE_PANEL_REFRESH_MILLIS = 5_000L
         const val TAG = "xcertplay-usb"
         const val SCREEN_TYPE_MAIN = 110
